@@ -8,19 +8,9 @@ const {
 	GraphQLObjectType,
 	GraphQLID,
 	GraphQLInt,
-	GraphQLList
+	GraphQLList,
+	GraphQLNonNull,
 } = graphQL;
-
-// const tempBooks = [
-// 	{ name: 'Wizards', genre: 'fantasy', id: '1', authorID: '1' },
-// 	{ name: 'Animals', genre: 'cognitive', id: '2', authorID: '2' },
-// 	{ name: 'Birds', genre: 'cognitive', id: '3', authorID: '2' }
-// ];
-//
-// const authors = [
-// 	{ name: 'Daniel Kiz', age: 43, id: '1' },
-// 	{ name: 'Robert Shown leonard', age: 33, id: '2' }
-// ];
 
 const BookType = new GraphQLObjectType({
 	name: 'Book',
@@ -30,8 +20,10 @@ const BookType = new GraphQLObjectType({
 		genre: { type: GraphQLString },
 		author: {
 			type: AuthorType,
-			resolve(parent, args) {
-				// return authors.find(({ id }) => id === parent.authorID);
+			resolve(parent) {
+				// to get exact author by id from client
+
+				return Author.findById(parent.authorID);
 			}
 		}
 	})
@@ -45,10 +37,12 @@ const AuthorType = new GraphQLObjectType({
 		age: { type: GraphQLInt },
 		books: {
 			type: new GraphQLList(BookType),
-			resolve(parent, args) {
-				// code to get data from db / other source
-				console.log(parent)
-				// return tempBooks.filter(({ authorID }) => authorID === parent.id);
+			resolve(parent) {
+				// to get exact books by author from client
+
+				return Book.find({
+					authorID: parent.id,
+				})
 			}
 		}
 	})
@@ -61,34 +55,35 @@ const RootQuery = new GraphQLObjectType({
 			type: BookType,
 			args: { id: { type: GraphQLID } },
 			resolve(parent, args) {
-				// code to get data from db / other source
+				// to get exact book with id from client
 
-				// return tempBooks.find(({ id }) => id === args.id);
+				return Book.findById(args.id)
 			}
 		},
 		author: {
 			type: AuthorType,
 			args: { id: { type: GraphQLID } },
 			resolve(parent, args) {
-				// code to get data from db / other source
+				// to get exact author with id from client
 
-				// return authors.find(({ id }) => id === args.id);
+				return Author.findById(args.id)
 			}
 		},
 		books: {
 			type: new GraphQLList(BookType),
 			resolve(parent, args) {
-				// code to get data from db / other source
+				// to return all books
 
-				// return tempBooks
+				return Book.find({})
 			}
 		},
 		authors: {
+			// GraphQLList - array of
 			type: new GraphQLList(AuthorType),
 			resolve(parent, args) {
-				// code to get data from db / other source
+				// to return all authors
 
-				// return authors
+				return Author.find({})
 			}
 		}
 	}
@@ -98,13 +93,15 @@ const Mutation = new GraphQLObjectType({
 	name: 'Mutation',
 	fields: {
 		addAuthor: {
+			// to add author from client
 			type: AuthorType,
 			args: {
 				name: {
-					type: GraphQLString,
+					// GraphQLNonNull to say that field is required
+					type: new GraphQLNonNull(GraphQLString),
 				},
 				age: {
-					type: GraphQLString,
+					type: new GraphQLNonNull(GraphQLString),
 				}
 			},
 			resolve(parent, args) {
@@ -112,8 +109,32 @@ const Mutation = new GraphQLObjectType({
 					name: args.name,
 					age: args.age,
 				});
-
+				// to return result what was added into db
 				return author.save();
+			}
+		},
+		addBook: {
+			// to add author from client
+			type: BookType,
+			args: {
+				name: {
+					type: new GraphQLNonNull(GraphQLString),
+				},
+				genre: {
+					type: new GraphQLNonNull(GraphQLString),
+				},
+				authorID: {
+					type: GraphQLID
+				},
+			},
+			resolve(parent, args) {
+				let book = new Book({
+					name: args.name,
+					genre: args.genre,
+					authorID: args.authorID
+				});
+				// to return result what was added into db
+				return book.save();
 			}
 		}
 	}
